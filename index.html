@@ -68,7 +68,7 @@
 
 <script>
     // Allowed phone numbers (Whitelisted purchased users)
-    const allowedPhoneNumbers = ["9876543210", "8765432109", "7654321098", "9999999999"];
+    const allowedPhoneNumbers = ["9876543210", "8765432109", "7654321098", "9999999999","8972752901","7076550802","9749402798","9874772380","9093537364","9382719113","7001942262","7478315270","9800477643","7421791001","7421791004","7421791009","7421791016","7421791025","7421791036","7421791049","7421791064","7421791081","7421791100","7421791121","7421791144","9088990506","7029360599"];
 
     // 100 Questions Data
     const questionsData = [
@@ -258,78 +258,102 @@
     }
 
     function submitTest() {
-        clearInterval(timerInterval);
-        document.getElementById("timer").classList.add("hidden");
-        document.getElementById("exam-section").classList.add("hidden");
-        document.getElementById("result-section").classList.remove("hidden");
+    clearInterval(timerInterval);
+    document.getElementById("timer").classList.add("hidden");
+    document.getElementById("exam-section").classList.add("hidden");
+    document.getElementById("result-section").classList.remove("hidden");
 
-        // Mark as attempted in LocalStorage
-        localStorage.setItem("attempted_" + studentDetails.phone, "true");
+    // Mark as attempted in LocalStorage
+    localStorage.setItem("attempted_" + studentDetails.phone, "true");
 
-        let correct = 0;
-        let wrong = 0;
-        let unattempted = 0;
+    let correct = 0;
+    let wrong = 0;
+    let unattempted = 0;
 
-        let previewHTML = "<h3>Detailed Review</h3>";
+    let previewHTML = "<h3 style='text-align: center;'>Detailed Review & Answer Key</h3>";
 
-        questionsData.forEach((q, index) => {
-            const selectedOption = document.querySelector(`input[name="q${q.id}"]:checked`);
-            const userAns = selectedOption ? selectedOption.value : null;
+    questionsData.forEach((q, index) => {
+        const selectedOption = document.querySelector(`input[name="q${q.id}"]:checked`);
+        const userAns = selectedOption ? selectedOption.value : null;
 
-            let statusText = "";
-            if (!userAns) {
-                unattempted++;
-                statusText = `<span class="unattempted">Unattempted</span>`;
-            } else if (userAns === q.ans) {
-                correct++;
-                statusText = `<span class="correct">Correct (+2)</span>`;
-            } else {
-                wrong++;
-                statusText = `<span class="wrong">Wrong (-0.5)</span>`;
+        let statusText = "";
+        if (!userAns) {
+            unattempted++;
+            statusText = `<span class="unattempted" style="color: orange; font-weight: bold;">Unattempted (0)</span>`;
+        } else if (userAns === q.ans) {
+            correct++;
+            statusText = `<span class="correct" style="color: green; font-weight: bold;">Correct (+2)</span>`;
+        } else {
+            wrong++;
+            statusText = `<span class="wrong" style="color: red; font-weight: bold;">Wrong (-0.5)</span>`;
+        }
+
+        // Render all 4 options for full review
+        let optionsListHTML = "<div style='margin-left: 15px; margin-top: 5px;'>";
+        q.options.forEach((opt, optIdx) => {
+            const optLetter = String.fromCharCode(65 + optIdx);
+            let optStyle = "color: #333;";
+
+            // Highlight correct answer in green and wrong user choice in red
+            if (optLetter === q.ans) {
+                optStyle = "color: green; font-weight: bold;";
+            } else if (optLetter === userAns && userAns !== q.ans) {
+                optStyle = "color: red; text-decoration: line-through;";
             }
 
-            previewHTML += `
-                <div class="question-card">
-                    <p><strong>Q${index + 1}. ${q.q}</strong> (${statusText})</p>
-                    <p>Your Answer: ${userAns ? userAns : "None"}</p>
-                    <p>Correct Answer: <strong>${q.ans}</strong></p>
-                </div>
-            `;
+            optionsListHTML += `<div style="${optStyle}">${opt}</div>`;
         });
+        optionsListHTML += "</div>";
 
-        const totalScore = (correct * 2) - (wrong * 0.5);
-
-        document.getElementById("result-summary").innerHTML = `
-            <p><strong>Name:</strong> ${studentDetails.name}</p>
-            <p><strong>Phone:</strong> ${studentDetails.phone}</p>
-            <p><strong>Correct Answers:</strong> ${correct}</p>
-            <p><strong>Wrong Answers:</strong> ${wrong}</p>
-            <p><strong>Unattempted:</strong> ${unattempted}</p>
-            <p><strong>Final Score:</strong> ${totalScore} / 200</p>
+        previewHTML += `
+            <div class="question-card" style="margin-bottom: 15px; padding: 10px; border-bottom: 1px solid #ccc; page-break-inside: avoid;">
+                <p><strong>Q${index + 1}. ${q.q}</strong> — Status: ${statusText}</p>
+                ${optionsListHTML}
+                <p style="margin-top: 8px; font-size: 14px;">
+                    <strong>Your Choice:</strong> ${userAns ? userAns : "None"} | 
+                    <strong>Correct Answer:</strong> <span style="color: green; font-weight: bold;">${q.ans}</span>
+                </p>
+            </div>
         `;
+    });
 
-        document.getElementById("preview-container").innerHTML = previewHTML;
+    const totalScore = (correct * 2) - (wrong * 0.5);
 
-        // Send results to external services
-        saveToGoogleSheet(studentDetails.name, studentDetails.phone, totalScore, correct, wrong, unattempted);
-        saveToFirebase(studentDetails.name, studentDetails.phone, totalScore, correct, wrong, unattempted);
-    }
+    document.getElementById("result-summary").innerHTML = `
+        <p><strong>Name:</strong> ${studentDetails.name}</p>
+        <p><strong>Phone:</strong> ${studentDetails.phone}</p>
+        <p><strong>Correct Answers:</strong> ${correct}</p>
+        <p><strong>Wrong Answers:</strong> ${wrong}</p>
+        <p><strong>Unattempted:</strong> ${unattempted}</p>
+        <p><strong>Final Score:</strong> ${totalScore} / 200</p>
+    `;
 
-    function downloadPDF() {
-        const element = document.getElementById("result-section");
-        const opt = {
-            margin:       10,
-            filename:     `${studentDetails.name}_Mock_Test_Result.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save();
-    }
+    document.getElementById("preview-container").innerHTML = previewHTML;
+
+    // Send results to external services
+    saveToGoogleSheet(studentDetails.name, studentDetails.phone, totalScore, correct, wrong, unattempted);
+    saveToFirebase(studentDetails.name, studentDetails.phone, totalScore, correct, wrong, unattempted);
+}
+
+function downloadPDF() {
+    const element = document.getElementById("result-section");
+    
+    // Configuration to format multi-page 100-question PDF cleanly
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `${studentDetails.name}_Mock_Test_Result.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+    
+    html2pdf().set(opt).from(element).save();
+}
 
     // Google Sheets Integration (via Appscript Web App URL)
     function saveToGoogleSheet(name, phone, score, correct, wrong, unattempted) {
-        const webAppUrl = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"; 
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbzB20_iaxbMUnCA4rw-PTrWQsdDMNSCj8uaWXYADkQYVUAymMKoO-bzKK0B9KbHk3Ps/exec"; 
         if (webAppUrl === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") return;
 
         fetch(webAppUrl, {
