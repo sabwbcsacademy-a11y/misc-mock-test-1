@@ -200,8 +200,9 @@
         }
 
         // Single attempt check via LocalStorage
-        if (localStorage.getItem("attempted_" + phone)) {
-            errorMsg.innerText = "You have already attempted this mock test once.";
+        let currentAttempts = parseInt(localStorage.getItem("attempts_" + phone) || "0", 10);
+        if (currentAttempts >= 20) {
+            errorMsg.innerText = "You have reached the maximum limit of 20 attempts for this test.";
             return;
         }
 
